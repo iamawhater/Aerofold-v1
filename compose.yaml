@@ -1,0 +1,13 @@
+services:
+  aerofold:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - aerofold-data:/app/runtime
+    environment:
+      AEROFOLD_API_TOKEN: ${AEROFOLD_API_TOKEN:-}
+    restart: unless-stopped
+    stop_grace_period: 60s
+volumes:
+  aerofold-data:

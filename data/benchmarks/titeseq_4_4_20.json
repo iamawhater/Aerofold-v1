@@ -1,0 +1,37 @@
+{
+  "id": "titeseq_4_4_20",
+  "name": "4-4-20 antibody \u00b7 Tite-Seq",
+  "description": "512 public antibody variants with measured fluorescein affinity and expression, aggregated across experimental replicates.",
+  "citation": "Adams RM, Mora T, Walczak AM, Kinney JB (2016). Measuring the sequence-affinity landscape of antibodies with massively parallel titration curves. eLife 5:e23156.",
+  "publication_url": "https://doi.org/10.7554/eLife.23156",
+  "source_url": "https://github.com/jbkinney/16_titeseq",
+  "source_commit": "54130c8fc6081bbfa8301c41e1afcfa6a5d79590",
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/jbkinney/16_titeseq/54130c8fc6081bbfa8301c41e1afcfa6a5d79590/data/replicate_1.csv",
+      "sha256": "e28733dc879de5092976c06a192fb4a1196b5b5ac7d15743b9119dc8f0e8d856"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/jbkinney/16_titeseq/54130c8fc6081bbfa8301c41e1afcfa6a5d79590/data/replicate_2.csv",
+      "sha256": "0eb6b74c880b242f1404e28f6898170aeea288d5e757e6295fb44b59b3941807"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/jbkinney/16_titeseq/54130c8fc6081bbfa8301c41e1afcfa6a5d79590/data/replicate_3.csv",
+      "sha256": "1f224bb421656d1b00760a6fb7d10736427d21378a20f3fd1afc63da3a7e5ec6"
+    }
+  ],
+  "csv_sha256": "962fd6577ff185b85cf2de33848af2d6dc72297cfb8ea0a26d850213395a5890",
+  "variant_count": 512,
+  "qc_population_size": 2794,
+  "sequence_scope": "Concatenated assayed 10-residue CDR1H and CDR3H fragments; not a full variable-domain sequence. Mutation coordinates are fragment-local.",
+  "parent_sequence": "TFSDYWMNWVGSYYGMDYWG",
+  "binding_label": "Binding pKd (higher is better)",
+  "stability_label": "Expression-based developability proxy (not structural stability)",
+  "processing": "Canonical 20-aa fragment pairs; finite positive Kd and nonnegative expression; pKd clipped to [5,9.5] assay range; median synonymous measurements within each replicate; expression divided by replicate WT median; require >=2 replicates; median across replicates; deterministic SHA256-ranked 512-variant subset independent of outcome scores. stability_score=100*relative_expression/(1+relative_expression).",
+  "redistribution_note": "Public factual measurement subset, attributed to Adams et al. No upstream code is redistributed. The associated eLife article is CC BY 4.0; the source repository has no separate license file. Retain attribution and provenance.",
+  "warnings": [
+    "Expression is a developability proxy, not a measured folding-stability endpoint.",
+    "Binding fits are clipped at assay limits; top-5% cutoff includes ties.",
+    "This subset and one random seed do not establish general superiority or experimental validity."
+  ]
+}

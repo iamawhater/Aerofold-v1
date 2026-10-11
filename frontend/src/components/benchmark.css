@@ -1,0 +1,327 @@
+.benchmark-view {
+  display: grid;
+  gap: 22px;
+}
+.benchmark-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 25px 30px;
+  background: #eaf0e9;
+  border: 1px solid #dae4d8;
+  border-radius: 12px;
+}
+.benchmark-intro .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.benchmark-intro h2 {
+  font-size: 25px;
+  margin: 14px 0 9px;
+  font-weight: 500;
+  letter-spacing: -0.7px;
+}
+.benchmark-intro p {
+  color: #68766b;
+  line-height: 1.7;
+  margin: 0;
+  font-size: 12px;
+}
+.benchmark-pair {
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  white-space: nowrap;
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.benchmark-pair small {
+  color: #879185;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.active-key {
+  color: #217460;
+}
+.random-key {
+  color: #9a692c;
+}
+.benchmark-layout {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.benchmark-panel {
+  background: #fff;
+  border: 1px solid #e0e5dc;
+  border-radius: 11px;
+  padding: 22px;
+  min-width: 0;
+}
+.benchmark-panel h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.benchmark-muted,
+.benchmark-note {
+  color: #738071;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.benchmark-controls fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.benchmark-controls label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  margin: 19px 0 0;
+  color: #546151;
+}
+.benchmark-controls label b {
+  float: right;
+  color: #217460;
+}
+.benchmark-controls input:not([type="range"]),
+.benchmark-controls select,
+.benchmark-chart-heading select {
+  width: 100%;
+  background: #fafbf8;
+  border: 1px solid #dce2d7;
+  padding: 10px;
+  border-radius: 6px;
+  color: #354832;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.benchmark-controls input[type="range"] {
+  width: 100%;
+  margin: 14px 0 0;
+  accent-color: #217460;
+}
+.benchmark-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+.benchmark-controls details {
+  font-size: 11px;
+  margin-top: 20px;
+}
+.benchmark-controls summary,
+.benchmark-protocol summary {
+  cursor: pointer;
+}
+.benchmark-budget {
+  background: #f1f4ec;
+  border-radius: 6px;
+  padding: 13px;
+  display: grid;
+  gap: 5px;
+  margin: 21px 0 14px;
+  font-size: 12px;
+}
+.benchmark-budget span {
+  font-size: 10px;
+  color: #738071;
+}
+.benchmark-budget.invalid {
+  background: #fff0e9;
+}
+.benchmark-run {
+  width: 100%;
+  justify-content: center;
+}
+.benchmark-results {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.benchmark-chart-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.benchmark-chart-heading .eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.3px;
+}
+.benchmark-chart-heading h3 {
+  margin-top: 8px;
+}
+.benchmark-chart-heading select {
+  width: auto;
+  max-width: 180px;
+  margin: 0;
+}
+.benchmark-chart-canvas {
+  height: 320px;
+  font-size: 11px;
+}
+.benchmark-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: #58724c;
+  padding: 12px 0;
+}
+.benchmark-progress small {
+  color: #7b8375;
+}
+.benchmark-empty {
+  min-height: 335px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #7b8c76;
+  gap: 10px;
+}
+.benchmark-empty h3 {
+  margin: 5px 0 0;
+  color: #4c6046;
+  font-size: 18px;
+  font-weight: 500;
+}
+.benchmark-empty p {
+  max-width: 310px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.benchmark-empty span {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.benchmark-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+.benchmark-cards .benchmark-panel {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+.benchmark-cards small {
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  color: #74816d;
+}
+.benchmark-cards strong {
+  font-size: 28px;
+  font-weight: 500;
+  color: #304b35;
+}
+.benchmark-cards em {
+  font-size: 16px;
+  font-style: normal;
+  margin-left: 4px;
+}
+.benchmark-cards span {
+  font-size: 11px;
+  color: #8d784f;
+}
+.benchmark-outcome {
+  font-size: 11px;
+  color: #6d7868;
+  padding: 0 4px;
+  line-height: 1.8;
+}
+.benchmark-protocol p {
+  font-size: 12px;
+  color: #6b7664;
+  line-height: 1.8;
+}
+.benchmark-protocol details {
+  font-size: 12px;
+  margin-top: 16px;
+}
+.benchmark-protocol a {
+  color: #217460;
+}
+.benchmark-table-scroll {
+  overflow-x: auto;
+}
+.benchmark-table table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.benchmark-table caption {
+  text-align: left;
+  font-size: 11px;
+  color: #76836d;
+  padding: 12px 0;
+}
+.benchmark-table th,
+.benchmark-table td {
+  text-align: left;
+  padding: 12px 9px;
+  border-bottom: 1px solid #edf0e8;
+}
+.benchmark-table th {
+  color: #7f8a74;
+  font-size: 10px;
+}
+.benchmark-view button:focus-visible,
+.benchmark-view input:focus-visible,
+.benchmark-view select:focus-visible,
+.benchmark-view summary:focus-visible {
+  outline: 2px solid #217460;
+  outline-offset: 3px;
+}
+@media (max-width: 1050px) {
+  .benchmark-layout {
+    grid-template-columns: 235px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .benchmark-panel {
+    padding: 17px;
+  }
+  .benchmark-cards {
+    gap: 7px;
+  }
+  .benchmark-cards .benchmark-panel {
+    padding: 12px;
+  }
+  .benchmark-cards strong {
+    font-size: 22px;
+  }
+  .benchmark-chart-heading {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 760px) {
+  .benchmark-layout {
+    grid-template-columns: 1fr;
+  }
+  .benchmark-intro {
+    padding: 20px;
+  }
+  .benchmark-pair {
+    display: none;
+  }
+  .benchmark-progress {
+    flex-wrap: wrap;
+  }
+  .benchmark-intro h2 {
+    font-size: 22px;
+  }
+  .benchmark-chart-canvas {
+    height: 290px;
+  }
+}
