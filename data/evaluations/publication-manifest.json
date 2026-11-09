@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-07",
+  "report": "output/pdf/aerofold-benchmark-report.pdf",
+  "evaluations": [
+    {
+      "file": "data/evaluations/publication-ablang2-extrapolation.json",
+      "sha256": "127be92f18ac995fdc63f4da3ea2abbd8f1ec5c1fe7f838615aa1e43565ebb33",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task titeseq_4420_binding --representation ablang2 --split mutation_extrapolation --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-ablang2-extrapolation.json"
+    },
+    {
+      "file": "data/evaluations/publication-ablang2-random.json",
+      "sha256": "82fb769f43c1e3b2d11905bede678a5258e8212a1bbe22900ca3c05314f56178",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task titeseq_4420_binding --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-d44_lysozyme_binding-ablang2-random.json",
+      "sha256": "b805c0931271c9b74d6295defcfb19fdd910b70154de9ea7690b7a872a8d7f7e",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task d44_lysozyme_binding --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-d44_lysozyme_binding-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-d44_lysozyme_binding-sequence-random.json",
+      "sha256": "2aac19e544b8a987a01781c45bba10c839899236fca5f6d77c776c02022fbba8",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task d44_lysozyme_binding --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-d44_lysozyme_binding-sequence-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-igdesign_tslp_binding-ablang2-random.json",
+      "sha256": "e277e87ee528ab297d7a0c7556d35a49fb4e437cef1c1899c58b7ec8c5db127f",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task igdesign_tslp_binding --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-igdesign_tslp_binding-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-igdesign_tslp_binding-sequence-random.json",
+      "sha256": "48d1e3d4c71fdb5d343111dc732ec89327fb69b30446381ef5b1d71c191837f8",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task igdesign_tslp_binding --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-igdesign_tslp_binding-sequence-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-nbthermo_dsf-ablang2-random.json",
+      "sha256": "55ac4c6b21d22e065d94e817385f8d35aa75467b566b61c2bd14ddd265497683",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task nbthermo_dsf --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-nbthermo_dsf-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-nbthermo_dsf-sequence-random.json",
+      "sha256": "c8a8697d91112bdd70d83990f19def2e14eb410832db217eff24cc35a8a32176",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task nbthermo_dsf --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-nbthermo_dsf-sequence-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-titeseq_4420_binding-sequence-random.json",
+      "sha256": "4ff7d4978f1ad4bc13c7c476a26cb00d23b55f875724435ececc978598f2cc7b",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task titeseq_4420_binding --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-titeseq_4420_binding-sequence-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-titeseq_4420_expression-ablang2-random.json",
+      "sha256": "f5325201504b3e88f3e674d2d6ed6610161abcc497b32d875363a27faa225b67",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task titeseq_4420_expression --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-titeseq_4420_expression-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-titeseq_4420_expression-sequence-random.json",
+      "sha256": "f66df5c369e37ce4971ed5f89a6123c7a8b0ac5a5c6b61ff695ef5b0ddeddba5",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task titeseq_4420_expression --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-titeseq_4420_expression-sequence-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-trastuzumab_her2_binding-ablang2-random.json",
+      "sha256": "c4a3818774c01487f101681be0c6a03fbf26641f92f1d093591d23edc97cfc2a",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task trastuzumab_her2_binding --representation ablang2 --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-trastuzumab_her2_binding-ablang2-random.json"
+    },
+    {
+      "file": "data/evaluations/publication-trastuzumab_her2_binding-sequence-random.json",
+      "sha256": "1434283e173e02b501d888e345950e8054e2bf549aba4cf08cc5961feaef82d8",
+      "command": ".venv/bin/python -m scripts.benchmark_prediction --task trastuzumab_her2_binding --representation sequence --split random --budget 768 --seeds 3 --seed 42 --test-limit 512 --output data/evaluations/publication-trastuzumab_her2_binding-sequence-random.json"
+    }
+  ]
+}

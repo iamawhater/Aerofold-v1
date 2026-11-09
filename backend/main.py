@@ -19,17 +19,6 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
-from backend.benchmarks import (
-    BenchmarkConfig,
-    run_benchmark,
-    validate_budget,
-)
-from backend.benchmarks import (
-    list_datasets as benchmark_datasets,
-)
-from backend.benchmarks import (
-    load_dataset as load_benchmark,
-)
 from backend.demo import make_demo
 from backend.middleware import RequestSizeLimitMiddleware
 from backend.models import DatasetInput, Observation, ObservationBatch, SelectionConfig
@@ -127,44 +116,6 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.get("/api/datasets", dependencies=[Depends(authorize)])
     def datasets() -> list[dict]:
         return store.list_datasets()
-
-    @app.get("/api/benchmark/datasets", dependencies=[Depends(authorize)])
-    def available_benchmarks() -> list[dict]:
-        return benchmark_datasets()
-
-    def execute_benchmark(identifier: str, config: BenchmarkConfig) -> None:
-        try:
-            result = run_benchmark(
-                config,
-                lambda partial: store.update_benchmark(
-                    identifier, "running", partial["progress"], result=partial
-                ),
-            )
-            store.update_benchmark(identifier, "completed", result["progress"], result=result)
-        except ValueError as exc:
-            store.update_benchmark(identifier, "failed", error=str(exc))
-        except Exception:
-            logger.exception("Benchmark %s failed", identifier)
-            store.update_benchmark(identifier, "failed", error="Benchmark failed. Inspect the server logs.")
-        finally:
-            slots.release()
-
-    @app.post("/api/benchmark/run", dependencies=[Depends(authorize)], status_code=202)
-    def start_benchmark(config: BenchmarkConfig) -> dict:
-        validate_budget(config, len(load_benchmark(config.dataset_id).ids))
-        if not slots.acquire(blocking=False):
-            raise HTTPException(429, "The compute queue is full; wait for the current job")
-        try:
-            identifier = store.create_benchmark(config.model_dump())
-            executor.submit(execute_benchmark, identifier, config)
-        except Exception:
-            slots.release()
-            raise
-        return {**store.benchmark(identifier), "poll_url": f"/api/benchmark/runs/{identifier}"}
-
-    @app.get("/api/benchmark/runs/{identifier}", dependencies=[Depends(authorize)])
-    def get_benchmark(identifier: str) -> dict:
-        return store.benchmark(identifier)
 
     @app.post("/api/datasets/demo", dependencies=[Depends(authorize)], status_code=201)
     def demo() -> dict:

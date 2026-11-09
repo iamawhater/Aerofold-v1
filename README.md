@@ -32,7 +32,7 @@ Docker prefetches weights during its build so its non-root runtime does not writ
 2. Choose AbLang-2 plus the sequence ensemble, or the offline ensemble. Set a labeled-data budget. **All available** removes that cap; calibration data remain separate from fitting data.
 3. Upload candidate sequences, or leave the file blank for a held-out public-data demonstration. Demo query labels are excluded from fitting, validation and calibration.
 4. Inspect rankings, native assay units, intervals, sequence support, and model weights. Download rankings as CSV or the full audit as JSON.
-5. Use **Benchmark** for repeated hidden-test evaluations, or **Add assay data** to create your own target-specific model.
+5. Use **Add assay data** to create your own target-specific model. Benchmarks run offline through the CLI; the hosted app does not expose benchmark controls or routes.
 
 Candidate CSV columns: `variant_id,heavy_sequence,light_sequence`. Use complete canonical variable domains, 70–180 residues per chain; light domains are optional for VHHs. Add `score` for experimental training CSVs and specify target, units and direction. Custom scores are **not automatically transformed**. Keep one antigen, scaffold family and assay protocol per upload. Exact sequence-pair replicates are grouped by median before any split.
 
@@ -103,9 +103,7 @@ Install the optional encoders, then compare all three predictors in one report:
 
 For just the standalone predictors, use `--predictors esm2-only antiberty-only`. The existing script default remains `--predictors ensemble`; `--representation` selects the representation of that ensemble only.
 
-In the website, open **Benchmark** and use **Model representation** to select **ESM-2-only**, **AntiBERTy-only**, or **Compare all three predictors**. Comparison mode also lets you choose the ensemble representation. Click **Run benchmark**: separate model curves appear in the chart, **Summary predictor** switches the metrics cards, and **Export full audit** includes all predictors and checkpoint provenance. Saved older ensemble results remain viewable. These options apply to benchmarks; the production prediction controls are unchanged.
-
-The same API accepts `predictors: ["ensemble", "esm2-only", "antiberty-only"]`, optional `embedding_batch_size` (1–128, default 16), and `local_only` (default false). For a single standalone model, send just its name in `predictors`. The existing default is the ensemble alone. `representation` affects only the ensemble, and `local_only` affects only ESM-2/AntiBERTy checkpoint downloads. Jobs retain the existing progress polling, history, and JSON export endpoints.
+Benchmark execution is available only through the CLI. Interactive benchmark pages and HTTP endpoints have been removed from both workspaces. Existing evaluation audits remain on disk.
 
 Each standalone model uses **only its frozen foundation embeddings** with a supervised `StandardScaler + Ridge` head, validation-selected regularization and independent 90% conformal calibration. It adds no mutation descriptors, masked likelihoods, or ensemble blending. Both average final-layer residue states, exclude special/padding tokens, and concatenate the heavy and light chain vectors. Missing chains use zero-filled blocks. They use the exact same seeds, outer test identities, nested labeled budgets and internal calibration splits as the ensemble.
 
@@ -121,24 +119,10 @@ Weights cache under `runtime/huggingface/hub`; embeddings under `runtime/benchma
 | `POST /api/prediction/tasks` | Multipart training CSV; name, target, unit, maximize, category |
 | `POST /api/prediction/run` | JSON config; optional query sequence records |
 | `POST /api/prediction/upload` | Candidate CSV plus JSON config form field |
-| `POST /api/prediction/benchmark/run` | Submit hidden-test benchmark |
 | `GET /api/prediction/jobs` | Saved job history |
 | `GET /api/prediction/jobs/{id}` | Progress, errors and results |
 | `GET /api/prediction/jobs/{id}/export?format=csv` | Prediction rankings |
 | `GET /api/prediction/jobs/{id}/export?format=json` | Full audit |
-
-Example:
-
-```powershell
-$config = @{task_id='titeseq_4420_binding'; representation='ablang2'; train_limit=768; repeats=3; seed=42; split='random'; test_limit=512; top_k=24} | ConvertTo-Json
-$job = Invoke-RestMethod http://127.0.0.1:8000/api/prediction/benchmark/run -Method Post -ContentType 'application/json' -Body $config
-do {
-    Start-Sleep -Seconds 3
-    $job = Invoke-RestMethod "http://127.0.0.1:8000/api/prediction/jobs/$($job.id)"
-    $job.progress
-} while ($job.status -in @('queued','running'))
-$job.result.curves
-```
 
 SQLite persistence and the shared bounded executor allow one running job and one queued job. Interrupted jobs are marked failed after a server restart. Use **one Uvicorn worker**. `AEROFOLD_DATA_DIR` changes runtime storage. Set `AEROFOLD_API_TOKEN` before serving beyond a trusted local environment; enter it in Connection settings. This embedded executor is intended for single-host research deployments, not distributed production.
 
@@ -156,3 +140,7 @@ Tests cover data integrity, unit conversion, deduplication, split independence, 
 Stronger real-world claims require scaffold/lineage-held-out and prospective wet-lab validation; antigen-conditioned models with matched labels; IMGT-aware alignment; replicate- and censor-aware likelihoods; paired multi-property measurements and a validated joint covariance model; and controlled comparisons against larger antibody encoders or supervised fine-tuning. This implementation does not claim those validations or universal superiority. Censored assay endpoints are currently point labels; pretraining overlap is unknown.
 
 Earlier active-learning architecture, ESM settings, synthetic demos and legacy APIs are documented in `docs/LEGACY_WORKSPACE.md`. Historical PDF assessments describe the earlier version, not this prediction engine.
+
+## Release evaluation report
+
+The 7 November 2026 retrospective report is saved at `output/pdf/aerofold-benchmark-report.pdf`. Thirteen evaluations cover six assays, AbLang-2 versus the offline ensemble, additive/mean baselines, three seeds, nested learning budgets, and a 4-4-20 mutation-extrapolation stress test. Machine-readable audits and exact rerun commands are indexed in `data/evaluations/publication-manifest.json`. These results do not establish prospective or new-antigen validity.

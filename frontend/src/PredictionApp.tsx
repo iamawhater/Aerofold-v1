@@ -19,10 +19,6 @@ import {
 } from "lucide-react";
 import {
   CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -32,7 +28,6 @@ import {
 } from "recharts";
 import { api, token } from "./api";
 import "./prediction.css";
-
 type Task = {
   id: string;
   name: string;
@@ -49,7 +44,9 @@ type Task = {
 };
 type Catalog = {
   tasks: Task[];
-  sources: { status: string }[];
+  sources: {
+    status: string;
+  }[];
   source_commit: string;
 };
 type Metrics = {
@@ -77,18 +74,24 @@ type Variant = {
 };
 type Card = {
   foundation_model: string | null;
-  heads: Record<string, { weight: number; rmse: number; alpha: number }>;
-  training: { fitting: number; calibration: number; total_labeled: number };
+  heads: Record<
+    string,
+    {
+      weight: number;
+      rmse: number;
+      alpha: number;
+    }
+  >;
+  training: {
+    fitting: number;
+    calibration: number;
+    total_labeled: number;
+  };
   nominal_coverage: number;
   uncertainty: string;
   limitations: string[];
 };
 type Predictor = "ensemble" | "esm2-only" | "antiberty-only";
-const benchmarkModels = [
-  { key: "ensemble", name: "AeroFold ensemble", color: "#217962" },
-  { key: "esm2-only", name: "ESM-2-only · 8M", color: "#4965ad" },
-  { key: "antiberty-only", name: "AntiBERTy-only", color: "#9b4e86" },
-] as const;
 type Curve = Partial<Record<Predictor | "additive" | "mean", Metrics>> & {
   training_size: number;
   repeats: number;
@@ -111,7 +114,13 @@ type Result = {
   warnings?: string[];
   predictors?: Predictor[];
   encoder_provenance?: Partial<
-    Record<Predictor, { model: string; revision: string }>
+    Record<
+      Predictor,
+      {
+        model: string;
+        revision: string;
+      }
+    >
   >;
 };
 type Job = {
@@ -132,26 +141,18 @@ type Job = {
     split?: string;
   };
 };
-type Page = "predict" | "benchmark" | "data" | "history";
+type Page = "predict" | "data" | "history";
 const number = (n: number | null | undefined, digits = 3) =>
   n == null ? "—" : n.toFixed(digits);
 const percent = (n: number | null | undefined) =>
   n == null ? "—" : `${(100 * n).toFixed(1)}%`;
-
 export default function PredictionApp() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [page, setPage] = useState<Page>(
-    window.location.hash === "#benchmark" ? "benchmark" : "predict",
-  );
+  const [page, setPage] = useState<Page>("predict");
   const [taskId, setTaskId] = useState("titeseq_4420_binding");
   const [representation, setRepresentation] = useState("ablang2");
-  const [benchmarkChoice, setBenchmarkChoice] = useState("ablang2");
-  const [summaryPredictor, setSummaryPredictor] =
-    useState<Predictor>("ensemble");
   const [limit, setLimit] = useState(768);
   const [seed, setSeed] = useState(42);
-  const [repeats, setRepeats] = useState(3);
-  const [split, setSplit] = useState("random");
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<Job | null>(null);
   const [history, setHistory] = useState<Job[]>([]);
@@ -163,27 +164,11 @@ export default function PredictionApp() {
   const [upload, setUpload] = useState(false);
   const [settings, setSettings] = useState(false);
   const [auth, setAuth] = useState(token());
-  const [metric, setMetric] = useState<"top_recall" | "spearman" | "rmse">(
-    "top_recall",
-  );
   const busy =
     submitting || job?.status === "queued" || job?.status === "running";
   const task = catalog?.tasks.find((t) => t.id === taskId);
   const result = job?.status === "completed" ? job.result : undefined;
   const prediction = result?.kind === "prediction" ? result : undefined;
-  const benchmark =
-    result?.kind === "prediction_benchmark" ? result : undefined;
-  const last = benchmark?.curves?.at(-1);
-  const displayedModels = benchmarkModels.filter((model) => last?.[model.key]);
-  const summaryModel =
-    displayedModels.find((model) => model.key === summaryPredictor) ||
-    displayedModels[0];
-  const summary = summaryModel && last?.[summaryModel.key];
-  const recallRange =
-    summaryModel &&
-    (summaryModel.key === "ensemble"
-      ? last?.recall_range
-      : last?.predictor_recall_ranges?.[summaryModel.key]);
   const variants = useMemo(
     () =>
       prediction?.variants?.filter((v) =>
@@ -191,7 +176,6 @@ export default function PredictionApp() {
       ) || [],
     [prediction, query],
   );
-
   async function refresh() {
     const [data, jobs] = await Promise.all([
       api<Catalog>("/prediction/tasks"),
@@ -200,24 +184,6 @@ export default function PredictionApp() {
     setCatalog(data);
     setHistory(jobs);
   }
-  function restoreBenchmarkSettings(saved: Job) {
-    if (saved.kind !== "prediction_benchmark" || !saved.config) return;
-    const config = saved.config;
-    const predictors = config.predictors || ["ensemble"];
-    setBenchmarkChoice(
-      predictors.length > 1
-        ? "compare"
-        : predictors[0] === "ensemble"
-          ? config.representation
-          : predictors[0],
-    );
-    setRepresentation(config.representation);
-    setTaskId(config.task_id);
-    setLimit(config.train_limit);
-    setSeed(config.seed);
-    setRepeats(config.repeats || 3);
-    setSplit(config.split || "random");
-  }
   useEffect(() => {
     refresh().catch((e) => setError(e.message));
     const saved = localStorage.getItem("aerofold-prediction-job");
@@ -225,7 +191,6 @@ export default function PredictionApp() {
       api<Job>(`/prediction/jobs/${saved}`)
         .then((saved) => {
           setJob(saved);
-          restoreBenchmarkSettings(saved);
         })
         .catch(() => localStorage.removeItem("aerofold-prediction-job"));
   }, []);
@@ -256,10 +221,23 @@ export default function PredictionApp() {
       clearTimeout(timer);
     };
   }, [job]);
-
   function navigate(next: Page) {
     setPage(next);
     window.location.hash = next === "predict" ? "predict" : next;
+  }
+  function resetView() {
+    if (busy) return;
+    localStorage.removeItem("aerofold-prediction-job");
+    setJob(null);
+    setError("");
+    setQuery("");
+    setTablePage(0);
+    setInspect(null);
+    setFile(null);
+    setTaskId("titeseq_4420_binding");
+    setRepresentation("ablang2");
+    setLimit(768);
+    setSeed(42);
   }
   async function start() {
     setError("");
@@ -273,30 +251,7 @@ export default function PredictionApp() {
         seed,
       };
       let next: Job;
-      if (page === "benchmark") {
-        next = await api<Job>("/prediction/benchmark/run", {
-          method: "POST",
-          body: JSON.stringify({
-            ...config,
-            representation:
-              benchmarkChoice === "ablang2" || benchmarkChoice === "sequence"
-                ? benchmarkChoice
-                : representation,
-            predictors:
-              benchmarkChoice === "compare"
-                ? ["ensemble", "esm2-only", "antiberty-only"]
-                : benchmarkChoice === "esm2-only" ||
-                    benchmarkChoice === "antiberty-only"
-                  ? [benchmarkChoice]
-                  : ["ensemble"],
-            train_limit: limit || 12000,
-            repeats,
-            split,
-            test_limit: 512,
-            top_k: 24,
-          }),
-        });
-      } else if (file) {
+      if (file) {
         const form = new FormData();
         form.set("file", file);
         form.set("config", JSON.stringify(config));
@@ -340,8 +295,7 @@ export default function PredictionApp() {
     try {
       const next = await api<Job>(`/prediction/jobs/${id}`);
       setJob(next);
-      restoreBenchmarkSettings(next);
-      navigate(next.kind === "prediction" ? "predict" : "benchmark");
+      navigate("predict");
       localStorage.setItem("aerofold-prediction-job", id);
       setTablePage(0);
     } catch (e) {
@@ -368,7 +322,6 @@ export default function PredictionApp() {
       setSubmitting(false);
     }
   }
-
   return (
     <div className="prediction-app">
       <aside className="pred-sidebar">
@@ -392,7 +345,6 @@ export default function PredictionApp() {
         {(
           [
             { id: "predict", name: "Prediction engine", icon: Dna },
-            { id: "benchmark", name: "Benchmark", icon: FlaskConical },
             { id: "data", name: "Data & evidence", icon: Database },
             { id: "history", name: "Run history", icon: History },
           ] as const
@@ -434,7 +386,7 @@ export default function PredictionApp() {
                 ? "Data & evidence"
                 : page === "history"
                   ? "Run history"
-                  : "Benchmark"}
+                  : "History"}
           </span>
           <span className="pred-badge">
             <span className="pred-dot" /> SUPERVISED PREDICTION
@@ -447,20 +399,16 @@ export default function PredictionApp() {
               <h1>
                 {page === "predict"
                   ? "Find the variants worth making."
-                  : page === "benchmark"
-                    ? "Measure the model. Trust the evidence."
-                    : page === "data"
-                      ? "Every prediction starts with evidence."
-                      : "Your modeling history."}
+                  : page === "data"
+                    ? "Every prediction starts with evidence."
+                    : "Your modeling history."}
               </h1>
               <p className="pred-muted">
                 {page === "predict"
                   ? "Predict assay performance for every candidate, with uncertainty and a clear view of where the model applies."
-                  : page === "benchmark"
-                    ? "Compare assay-trained predictors on unseen experimental sequences and inspect their ranking performance."
-                    : page === "data"
-                      ? "Separate targets, explicit assay units, published variable domains, and traceable source licenses."
-                      : "Reopen saved predictions, benchmark results, and their model records."}
+                  : page === "data"
+                    ? "Separate targets, explicit assay units, published variable domains, and traceable source licenses."
+                    : "Reopen saved predictions and their model records."}
               </p>
             </div>
             <button
@@ -478,14 +426,19 @@ export default function PredictionApp() {
               </button>
             </div>
           )}
-          {(page === "predict" || page === "benchmark") && (
+          {page === "predict" && (
             <div className="pred-layout">
               <section className="pred-panel pred-controls">
-                <h3>
-                  {page === "benchmark"
-                    ? "Run a held-out benchmark"
-                    : "Configure your prediction"}
-                </h3>
+                <h3>{"Configure your prediction"}</h3>
+                {job && !busy && (
+                  <button
+                    className="pred-button secondary"
+                    onClick={resetView}
+                    title="Return to the starting view. This run remains in Run history."
+                  >
+                    Reset view
+                  </button>
+                )}
                 <p className="pred-muted small">
                   Each model learns one target and one assay.
                 </p>
@@ -524,14 +477,8 @@ export default function PredictionApp() {
                   <label>
                     Model representation
                     <select
-                      value={
-                        page === "benchmark" ? benchmarkChoice : representation
-                      }
-                      onChange={(e) =>
-                        page === "benchmark"
-                          ? setBenchmarkChoice(e.target.value)
-                          : setRepresentation(e.target.value)
-                      }
+                      value={representation}
+                      onChange={(e) => setRepresentation(e.target.value)}
                     >
                       <option value="ablang2">
                         AbLang-2 + sequence ensemble
@@ -539,48 +486,14 @@ export default function PredictionApp() {
                       <option value="sequence">
                         Sequence ensemble · offline / fast
                       </option>
-                      {page === "benchmark" && (
-                        <>
-                          <option value="esm2-only">
-                            ESM-2-only · 8M + ridge
-                          </option>
-                          <option value="antiberty-only">
-                            AntiBERTy-only + ridge
-                          </option>
-                          <option value="compare">
-                            Compare all three predictors
-                          </option>
-                        </>
-                      )}
+                      {false}
                     </select>
                   </label>
-                  {page === "benchmark" && benchmarkChoice === "compare" && (
-                    <label>
-                      Ensemble representation
-                      <select
-                        value={representation}
-                        onChange={(e) => setRepresentation(e.target.value)}
-                      >
-                        <option value="ablang2">
-                          AbLang-2 + sequence ensemble
-                        </option>
-                        <option value="sequence">
-                          Sequence ensemble · offline / fast
-                        </option>
-                      </select>
-                    </label>
-                  )}
+                  {false}
                   <p className="pred-help">
-                    {page === "benchmark" &&
-                    ["esm2-only", "antiberty-only", "compare"].includes(
-                      benchmarkChoice,
-                    )
-                      ? "Frozen foundation embeddings with assay-trained ridge heads and separate calibration. First-time download and encoding may take several minutes. Comparisons use identical splits and labeled budgets."
-                      : (page === "benchmark"
-                            ? benchmarkChoice
-                            : representation) === "ablang2"
-                        ? "Pretrained antibody embeddings plus assay-trained prediction heads. First-time encoding may take several minutes."
-                        : "Additive, interaction, local-kernel and tree models. No foundation-model embeddings."}
+                    {representation === "ablang2"
+                      ? "Pretrained antibody embeddings plus assay-trained prediction heads. First-time encoding may take several minutes."
+                      : "Additive, interaction, local-kernel and tree models. No foundation-model embeddings."}
                   </p>
                   <div className="pred-two">
                     <label>
@@ -594,9 +507,7 @@ export default function PredictionApp() {
                             {n.toLocaleString()}
                           </option>
                         ))}
-                        {page !== "benchmark" && (
-                          <option value={0}>All available</option>
-                        )}
+                        {<option value={0}>All available</option>}
                       </select>
                     </label>
                     <label>
@@ -610,41 +521,7 @@ export default function PredictionApp() {
                       />
                     </label>
                   </div>
-                  {page === "benchmark" ? (
-                    <>
-                      <label>
-                        Evaluation split
-                        <select
-                          value={split}
-                          onChange={(e) => setSplit(e.target.value)}
-                        >
-                          <option value="random">
-                            Unseen variants · random split
-                          </option>
-                          <option value="mutation_extrapolation">
-                            Higher mutation count · stress test
-                          </option>
-                        </select>
-                      </label>
-                      <label>
-                        Repeated splits
-                        <select
-                          value={repeats}
-                          onChange={(e) => setRepeats(Number(e.target.value))}
-                        >
-                          {[1, 3, 5, 10].map((n) => (
-                            <option key={n} value={n}>
-                              {n} {n === 1 ? "seed" : "seeds"}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <p className="pred-help">
-                        Three training budgets, up to 512 held-out sequences per
-                        seed. Exact sequence duplicates never cross the split.
-                      </p>
-                    </>
-                  ) : (
+                  {
                     <>
                       <label className="pred-file">
                         <Upload size={20} />
@@ -673,7 +550,7 @@ export default function PredictionApp() {
                         </p>
                       )}
                     </>
-                  )}
+                  }
                   <button
                     className="pred-button primary pred-run"
                     disabled={!task?.ready || busy}
@@ -684,17 +561,15 @@ export default function PredictionApp() {
                     ) : (
                       <FlaskConical size={17} />
                     )}
-                    {page === "benchmark"
-                      ? "Run benchmark"
-                      : "Predict & rank variants"}
+                    {"Predict & rank variants"}
                     <ArrowRight size={17} />
                   </button>
                 </fieldset>
                 <div className="pred-method-note">
                   <ShieldCheck size={15} />
-                  {page === "benchmark"
-                    ? "Validation selects prediction heads. Separate calibration data set the prediction intervals."
-                    : "Validation chooses the model blend. Separate calibration data set the prediction intervals."}
+                  {
+                    "Validation chooses the model blend. Separate calibration data set the prediction intervals."
+                  }
                 </div>
               </section>
               <div className="pred-results">
@@ -915,232 +790,19 @@ export default function PredictionApp() {
                       />
                     )}
                   </>
-                ) : page === "benchmark" &&
-                  benchmark &&
-                  last &&
-                  summary &&
-                  summaryModel ? (
-                  <>
-                    <div className="pred-result-title">
-                      <div>
-                        <p className="pred-eyebrow">INDEPENDENT TEST RESULTS</p>
-                        <h2>{benchmark.task.name}</h2>
-                        <p className="pred-muted small">
-                          {last.repeats} {last.repeats === 1 ? "seed" : "seeds"}{" "}
-                          · {summary.test_count} test sequences / seed ·{" "}
-                          {number(benchmark.seconds, 1)} s
-                        </p>
-                      </div>
-                      <button
-                        className="pred-button secondary"
-                        onClick={() => exportResult("json")}
-                      >
-                        <ArrowDownToLine size={16} /> Export full audit
-                      </button>
-                    </div>
-                    <section className="pred-panel">
-                      <div className="pred-section-title">
-                        <div>
-                          <p className="pred-eyebrow">
-                            SUPERVISED LEARNING CURVE
-                          </p>
-                          <h3>More measurements. Measurable performance.</h3>
-                        </div>
-                        <select
-                          aria-label="Benchmark metric"
-                          value={metric}
-                          onChange={(e) =>
-                            setMetric(e.target.value as typeof metric)
-                          }
-                        >
-                          <option value="top_recall">Top-5% recall</option>
-                          <option value="spearman">Spearman correlation</option>
-                          <option value="rmse">RMSE · lower is better</option>
-                        </select>
-                      </div>
-                      <div className="pred-chart large">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={benchmark.curves?.map((c) => ({
-                              labels: c.training_size,
-                              ...Object.fromEntries(
-                                displayedModels.map((model) => [
-                                  model.key,
-                                  c[model.key]?.[metric],
-                                ]),
-                              ),
-                              additive: c.additive?.[metric],
-                              random:
-                                metric === "top_recall"
-                                  ? c[summaryModel.key]?.random_recall
-                                  : undefined,
-                            }))}
-                            margin={{ top: 24, right: 20, left: 5, bottom: 25 }}
-                          >
-                            <CartesianGrid vertical={false} stroke="#e6ebe4" />
-                            <XAxis
-                              dataKey="labels"
-                              label={{
-                                value:
-                                  "Labeled sequences available for development",
-                                position: "bottom",
-                                offset: 10,
-                              }}
-                            />
-                            <YAxis
-                              tickFormatter={(v) =>
-                                metric === "top_recall"
-                                  ? percent(v)
-                                  : number(v, 2)
-                              }
-                            />
-                            <Tooltip
-                              formatter={(v) =>
-                                metric === "top_recall"
-                                  ? percent(Number(v))
-                                  : number(Number(v))
-                              }
-                            />
-                            <Legend
-                              verticalAlign="top"
-                              height={displayedModels.length > 1 ? 72 : 40}
-                            />
-                            {displayedModels.map((model) => (
-                              <Line
-                                key={model.key}
-                                name={model.name}
-                                type="linear"
-                                dataKey={model.key}
-                                stroke={model.color}
-                                strokeWidth={3}
-                                dot={{ r: 5 }}
-                              />
-                            ))}
-                            {last.additive && (
-                              <Line
-                                name="Additive regression"
-                                type="linear"
-                                dataKey="additive"
-                                stroke="#758bab"
-                                strokeWidth={2}
-                                dot={{ r: 4 }}
-                              />
-                            )}
-                            {metric === "top_recall" && (
-                              <Line
-                                name="Expected random ranking"
-                                dataKey="random"
-                                stroke="#c6904a"
-                                strokeWidth={2}
-                                strokeDasharray="5 5"
-                                dot={false}
-                              />
-                            )}
-                            {metric === "spearman" && (
-                              <ReferenceLine
-                                y={0}
-                                stroke="#c6904a"
-                                strokeDasharray="5 5"
-                              />
-                            )}
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <p className="pred-help">
-                        Same hidden test sequences across budgets within each
-                        seed. Curves show seed means; no test labels select
-                        models. Random recall is the exact fixed-budget
-                        expectation.
-                      </p>
-                    </section>
-                    {displayedModels.length > 1 && (
-                      <label>
-                        Summary predictor
-                        <select
-                          value={summaryModel.key}
-                          onChange={(e) =>
-                            setSummaryPredictor(e.target.value as Predictor)
-                          }
-                        >
-                          {displayedModels.map((model) => (
-                            <option key={model.key} value={model.key}>
-                              {model.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    <div className="pred-stat-grid">
-                      <Stat
-                        label="FINAL ENRICHMENT"
-                        value={`${number(summary.top_enrichment, 2)}×`}
-                        detail={`${summaryModel.name} · expected random: 1×`}
-                      />
-                      <Stat
-                        label="SPEARMAN CORRELATION"
-                        value={number(summary.spearman)}
-                        detail={
-                          last.additive
-                            ? `Additive baseline: ${number(last.additive.spearman)}`
-                            : summaryModel.name
-                        }
-                      />
-                      <Stat
-                        label="90% INTERVAL COVERAGE"
-                        value={percent(summary.coverage)}
-                        detail={`RMSE: ${number(summary.rmse)} ${benchmark.task.unit}`}
-                      />
-                    </div>
-                    <section className="pred-panel">
-                      <h3>What this benchmark establishes</h3>
-                      <p className="pred-muted">{benchmark.protocol}</p>
-                      {recallRange && (
-                        <p className="pred-help">
-                          {summaryModel.name} · final top-binder recall range
-                          across seeds: {percent(recallRange[0])}–
-                          {percent(recallRange[1])}. This range is descriptive,
-                          not a confidence interval.
-                        </p>
-                      )}
-                      {Object.entries(benchmark.encoder_provenance || {}).map(
-                        ([key, encoder]) => (
-                          <p className="pred-help" key={key}>
-                            {
-                              benchmarkModels.find((model) => model.key === key)
-                                ?.name
-                            }
-                            : {encoder.model}. Frozen embeddings + supervised
-                            ridge; no sequence descriptors or ensemble blending.
-                            Checkpoint revision: {encoder.revision}.
-                          </p>
-                        ),
-                      )}
-                      <ul className="pred-limitations">
-                        {benchmark.limitations?.map((text) => (
-                          <li key={text}>{text}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  </>
                 ) : (
                   <section className="pred-panel pred-empty">
                     <div className="pred-orbit">
                       <Dna size={46} />
                     </div>
                     <p className="pred-eyebrow">
-                      {page === "benchmark"
-                        ? "EVIDENCE BEFORE CLAIMS"
-                        : "FROM SEQUENCE TO ASSAY PREDICTION"}
+                      {"FROM SEQUENCE TO ASSAY PREDICTION"}
                     </p>
-                    <h2>
-                      {page === "benchmark"
-                        ? "Give the predictor an honest test."
-                        : "A prediction for every variant."}
-                    </h2>
+                    <h2>{"A prediction for every variant."}</h2>
                     <p>
-                      {page === "benchmark"
-                        ? "Run repeated held-out evaluations, inspect the strong baseline, and see where the model succeeds or fails."
-                        : "Choose a target-specific assay and upload candidates, or try a ready-to-run public-data demonstration."}
+                      {
+                        "Choose a target-specific assay and upload candidates, or try a ready-to-run public-data demonstration."
+                      }
                     </p>
                     <div className="pred-empty-steps">
                       <span>
@@ -1263,7 +925,7 @@ export default function PredictionApp() {
               <h3>Saved model jobs</h3>
               {!history.length && (
                 <p className="pred-muted">
-                  Run a prediction or benchmark to create your first result.
+                  Run a prediction to create your first result.
                 </p>
               )}
               <div className="pred-history">
@@ -1280,7 +942,7 @@ export default function PredictionApp() {
                       <b>
                         {j.kind === "prediction"
                           ? "Variant prediction"
-                          : "Held-out benchmark"}
+                          : "Saved prediction"}
                       </b>
                       <small>
                         {new Date(j.created_at).toLocaleString()} ·{" "}
@@ -1478,7 +1140,6 @@ export default function PredictionApp() {
     </div>
   );
 }
-
 function Stat({
   label,
   value,

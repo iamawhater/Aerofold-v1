@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -31,9 +31,7 @@ import {
 import { api, download, token } from "./api";
 import Scatter from "./Scatter";
 import SequenceMap from "./SequenceMap";
-const BenchmarkView = lazy(() => import("./components/BenchmarkView"));
 import type { Config, Dataset, Result, Run, Variant } from "./types";
-
 const DEFAULT_CONFIG: Config = {
   embedding: "descriptor",
   exploration: 0.35,
@@ -46,16 +44,13 @@ const DEFAULT_CONFIG: Config = {
   seed: 42,
   batch_size: 24,
 };
-type Page = "overview" | "library" | "history" | "benchmark";
+type Page = "overview" | "library" | "history";
 type Modal = "export" | "settings" | "import" | "methods" | "auth" | null;
-
 export default function App() {
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [run, setRun] = useState<Run | null>(null);
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
-  const [page, setPage] = useState<Page>(
-    window.location.hash === "#benchmark" ? "benchmark" : "overview",
-  );
+  const [page, setPage] = useState<Page>("overview");
   const [modal, setModal] = useState<Modal>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -65,7 +60,12 @@ export default function App() {
   const [tablePage, setTablePage] = useState(0);
   const [view, setView] = useState("variants");
   const [inspect, setInspect] = useState<Variant | null>(null);
-  const [saved, setSaved] = useState<{ id: string; name: string }[]>([]);
+  const [saved, setSaved] = useState<
+    {
+      id: string;
+      name: string;
+    }[]
+  >([]);
   const [auth, setAuth] = useState(token());
   const result = run?.result || null;
   const working = busy || run?.status === "running" || run?.status === "queued";
@@ -78,7 +78,6 @@ export default function App() {
         .sort((a, b) => a.selection_rank! - b.selection_rank!) || [],
     [result],
   );
-
   async function startRun(
     data: Dataset = dataset!,
     parameters: Config = config,
@@ -88,7 +87,9 @@ export default function App() {
     setBusy(true);
     setInspect(null);
     try {
-      const job = await api<{ id: string }>(`/datasets/${data.id}/runs`, {
+      const job = await api<{
+        id: string;
+      }>(`/datasets/${data.id}/runs`, {
         method: "POST",
         body: JSON.stringify(parameters),
       });
@@ -100,7 +101,6 @@ export default function App() {
       setBusy(false);
     }
   }
-
   async function openDataset(data: Dataset, autoRun = true) {
     setDataset(data);
     setRun(null);
@@ -118,12 +118,16 @@ export default function App() {
     }
     setSaved(await api("/datasets"));
   }
-
   async function initialize() {
     setBusy(true);
     setError("");
     try {
-      const datasets = await api<{ id: string; name: string }[]>("/datasets");
+      const datasets = await api<
+        {
+          id: string;
+          name: string;
+        }[]
+      >("/datasets");
       const remembered = localStorage.getItem("aerofold-dataset");
       const id =
         datasets.find((d) => d.id === remembered)?.id || datasets[0]?.id;
@@ -137,7 +141,6 @@ export default function App() {
       setBusy(false);
     }
   }
-
   useEffect(() => {
     void initialize();
   }, []);
@@ -224,7 +227,6 @@ export default function App() {
       previous?.focus({ preventScroll: true });
     };
   }, [modal, inspect]);
-
   async function importFile(file: File | undefined, measurements: boolean) {
     if (!file || (measurements && !dataset)) return;
     setBusy(true);
@@ -252,7 +254,6 @@ export default function App() {
       setBusy(false);
     }
   }
-
   async function simulate() {
     if (!run || !dataset) return;
     setBusy(true);
@@ -273,7 +274,6 @@ export default function App() {
       setBusy(false);
     }
   }
-
   async function exportFile(format: string) {
     if (!run) return;
     try {
@@ -283,7 +283,6 @@ export default function App() {
       setError((e as Error).message);
     }
   }
-
   const filtered = (result?.variants || [])
     .filter(
       (v) =>
@@ -301,7 +300,6 @@ export default function App() {
         : b.acquisition - a.acquisition,
     );
   const tableRows = filtered.slice(tablePage * 12, (tablePage + 1) * 12);
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -342,18 +340,13 @@ export default function App() {
               { id: "overview", label: "Overview", Icon: LayoutDashboard },
               { id: "library", label: "Sequence library", Icon: Layers3 },
               { id: "history", label: "Learning history", Icon: History },
-              { id: "benchmark", label: "Benchmark mode", Icon: FlaskConical },
             ] as const
           ).map(({ id, label, Icon }) => (
             <button
               key={id}
               onClick={() => {
                 setPage(id);
-                window.history.replaceState(
-                  null,
-                  "",
-                  id === "benchmark" ? "#benchmark" : window.location.pathname,
-                );
+                window.history.replaceState(null, "", window.location.pathname);
               }}
               className={page === id ? "nav-item active" : "nav-item"}
             >
@@ -434,15 +427,9 @@ export default function App() {
         <header className="topbar">
           <div className="breadcrumb">
             Workspace <ChevronRight size={13} />
-            <span>
-              {page === "benchmark" ? "Benchmark mode" : "Antibody discovery"}
-            </span>
+            <span>{"Antibody discovery"}</span>
             <span className="environment">
-              {page === "benchmark"
-                ? "PUBLIC DMS"
-                : dataset?.demo
-                  ? "SANDBOX"
-                  : "LOCAL"}
+              {dataset?.demo ? "SANDBOX" : "LOCAL"}
             </span>
           </div>
           <div className="topbar-right">
@@ -467,21 +454,17 @@ export default function App() {
                   ? "Better variants. Smarter experiments."
                   : page === "library"
                     ? "Your sequence landscape."
-                    : page === "benchmark"
-                      ? "Benchmark the learning loop."
-                      : "Discovery is a learning loop."}
+                    : "Discovery is a learning loop."}
               </h1>
               <p>
                 {page === "overview"
                   ? "Navigate the trade-off between binding, stability, and what comes next."
                   : page === "library"
                     ? "Bring your library, connect assay results, and explore the sequence space."
-                    : page === "benchmark"
-                      ? "Compare acquisition strategies on a public, measured antibody landscape."
-                      : "Every run is a reproducible snapshot of the evidence available at that moment."}
+                    : "Every run is a reproducible snapshot of the evidence available at that moment."}
               </p>
             </div>
-            {page !== "benchmark" && (
+            {
               <button
                 className="button secondary"
                 onClick={() => setModal("import")}
@@ -490,7 +473,7 @@ export default function App() {
                 <Upload size={15} />
                 Import data
               </button>
-            )}
+            }
           </div>
           {(error || run?.status === "failed") && (
             <div className="alert error" role="alert">
@@ -524,7 +507,7 @@ export default function App() {
             </div>
           )}
 
-          {page !== "benchmark" && (
+          {
             <div className="experiment-bar">
               <div>
                 <span className="experiment-icon">
@@ -542,13 +525,9 @@ export default function App() {
                 <ShieldCheck size={14} />
               </span>
             </div>
-          )}
+          }
 
-          {page === "benchmark" && (
-            <Suspense fallback={<p role="status">Loading Benchmark Mode…</p>}>
-              <BenchmarkView />
-            </Suspense>
-          )}
+          {false}
           {page === "overview" && (
             <>
               <div className="metrics">
@@ -1044,11 +1023,7 @@ export default function App() {
               AeroFold-Ab <b>Built for the next discovery.</b>
             </span>
             <span>
-              {page === "benchmark"
-                ? "Public experimental data · "
-                : dataset?.demo
-                  ? "Synthetic data · "
-                  : ""}
+              {dataset?.demo ? "Synthetic data · " : ""}
               Sequence proxies require experimental validation{" "}
               <button onClick={() => setModal("methods")}>
                 View methods <ExternalLink size={11} />
@@ -1117,9 +1092,9 @@ export default function App() {
                 )}
                 {config.embedding === "ablang2" && (
                   <div className="alert">
-                    Requires optional AbLang-2 dependencies and complete variable
-                    domains. First run downloads public model weights; sequences
-                    are encoded locally and then cached.
+                    Requires optional AbLang-2 dependencies and complete
+                    variable domains. First run downloads public model weights;
+                    sequences are encoded locally and then cached.
                   </div>
                 )}
                 <Range
@@ -1386,10 +1361,10 @@ export default function App() {
                   <h3>02 / Learn two objectives</h3>
                   <p>
                     A joint PyTorch Gaussian process fits measured binding and
-                    stability with learned covariance, returning means and latent
-                    epistemic uncertainty. Both scores are maximized. Stability uses a
-                    0–100 assay scale with explicit liability penalties. Raw Kd
-                    must be transformed before upload.
+                    stability with learned covariance, returning means and
+                    latent epistemic uncertainty. Both scores are maximized.
+                    Stability uses a 0–100 assay scale with explicit liability
+                    penalties. Raw Kd must be transformed before upload.
                   </p>
                   <h3>03 / Explore the Pareto frontier</h3>
                   <p>
@@ -1570,7 +1545,6 @@ export default function App() {
     </div>
   );
 }
-
 function Metric({
   label,
   value,

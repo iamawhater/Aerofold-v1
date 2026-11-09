@@ -1,8 +1,6 @@
 """Benchmark fairness, metric identities, deterministic replay and job lifecycle."""
 
 import json
-import threading
-import time
 
 import numpy as np
 import pytest
@@ -120,31 +118,7 @@ def test_random_uses_only_unmeasured_feasible_candidates():
     assert eligible[chosen].all()
 
 
-def test_api_job_validation_auth_and_recovery(tmp_path, monkeypatch):
-    monkeypatch.setenv("AEROFOLD_API_TOKEN", "benchmark-test")
-    with TestClient(create_app(tmp_path)) as client:
-        assert client.get("/api/benchmark/datasets").status_code == 401
-        client.headers["Authorization"] = "Bearer benchmark-test"
-        assert client.get("/api/benchmark/datasets").json()[0]["variant_count"] == 512
-        for body in (
-            {"rounds": 12, "batch_size": 48},
-            {"dataset_id": "../../bad"},
-            {"batch_size": 23},
-            {"exploration": 1.1},
-        ):
-            assert client.post("/api/benchmark/run", json=body).status_code == 422
-        response = client.post("/api/benchmark/run", json={"rounds": 1, "batch_size": 12})
-        assert response.status_code == 202
-        url = response.json()["poll_url"]
-        deadline = time.monotonic() + 30
-        while time.monotonic() < deadline:
-            job = client.get(url).json()
-            if job["status"] in {"completed", "failed"}:
-                break
-            time.sleep(0.05)
-        assert job["status"] == "completed", job
-        assert job["result"]["summary"]["assays_per_agent"] == 32
-        assert client.get("/api/benchmark/runs/missing").status_code == 404
+def test_storage_recovery(tmp_path):
     store = Store(tmp_path / "aerofold.sqlite3")
     identifier = store.create_benchmark({})
     store.update_benchmark(identifier, "running", result={"rounds": [0]})
@@ -153,21 +127,7 @@ def test_api_job_validation_auth_and_recovery(tmp_path, monkeypatch):
     assert store.benchmark(identifier)["result"] == {"rounds": [0]}
 
 
-def test_bounded_shared_queue(tmp_path, monkeypatch):
-    release = threading.Event()
-    entered = threading.Event()
-
-    def blocked(config, progress):
-        entered.set()
-        release.wait(timeout=10)
-        return {"progress": "Done"}
-
-    monkeypatch.setattr("backend.main.run_benchmark", blocked)
+def test_benchmark_catalog_removed(tmp_path):
     with TestClient(create_app(tmp_path)) as client:
-        try:
-            assert client.post("/api/benchmark/run", json={}).status_code == 202
-            assert entered.wait(timeout=5)
-            assert client.post("/api/benchmark/run", json={}).status_code == 202
-            assert client.post("/api/benchmark/run", json={}).status_code == 429
-        finally:
-            release.set()
+        assert client.get("/api/benchmark/datasets").status_code == 404
+        assert client.get("/api/benchmark/runs/missing").status_code == 404

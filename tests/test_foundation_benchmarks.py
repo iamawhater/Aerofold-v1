@@ -1,7 +1,5 @@
 """Standalone embedding comparators: pooling, split fairness and label isolation."""
 
-import time
-
 import numpy as np
 import pytest
 import torch
@@ -102,71 +100,21 @@ def test_standalone_does_not_fit_sequence_ensemble(tmp_path, monkeypatch):
         fb.run_benchmark_suite(config, tmp_path, ("esm2-only", "esm2-only"))
 
 
-@pytest.mark.parametrize(
-    "predictors",
-    [
-        ["esm2-only"],
-        ["antiberty-only"],
-        ["ensemble", "esm2-only", "antiberty-only"],
-    ],
-)
-def test_benchmark_api_dispatch_persistence_and_export(tmp_path, monkeypatch, predictors):
-    """The dashboard request reaches the suite and persists distinct model audits."""
-    from backend import prediction_api
-
-    metadata, records = load_task("titeseq_4420_binding")
-    records = records[:100]
-    for module in (fb, predictions, prediction_api):
-        monkeypatch.setattr(module, "load_task", lambda *_: (metadata, records))
-    monkeypatch.delenv("AEROFOLD_API_TOKEN", raising=False)
-    encoder_calls = []
-
-    def encode(rows, predictor, root, progress, batch_size, local_only):
-        encoder_calls.append((predictor, batch_size, local_only))
-        progress(f"Encoding {predictor}")
-        return np.array([np.random.default_rng(int(fingerprint(r)[:8], 16)).normal(size=8) for r in rows]), {
-            "test_fixture": True,
-            "predictor": predictor,
-        }
-
-    monkeypatch.setattr(fb, "frozen_embeddings", encode)
-    with TestClient(create_app(tmp_path)) as client:
-        response = client.post(
-            "/api/prediction/benchmark/run",
-            json={
-                "representation": "sequence",
-                "train_limit": 80,
-                "test_limit": 20,
-                "repeats": 1,
-                "predictors": predictors,
-                "embedding_batch_size": 8,
-                "local_only": True,
-            },
-        )
-        assert response.status_code == 202, response.text
-        identifier = response.json()["id"]
-        for _ in range(200):
-            job = client.get(f"/api/prediction/jobs/{identifier}").json()
-            if job["status"] not in {"queued", "running"}:
-                break
-            time.sleep(0.05)
-        assert job["status"] == "completed", job
-        result = job["result"]
-        assert result["predictors"] == predictors
-        assert encoder_calls == [(p, 8, True) for p in predictors if p != "ensemble"]
-        assert result["config"]["predictors"] == predictors
-        for point in result["curves"]:
-            assert all(p in point for p in predictors)
-            assert ("ensemble" in point) == ("ensemble" in predictors)
-        exported = client.get(f"/api/prediction/jobs/{identifier}/export?format=json").json()
-        assert exported == result
-        assert client.get("/api/prediction/jobs").json()[0]["id"] == identifier
-
-
-@pytest.mark.parametrize("predictors", [[], ["unknown"], ["esm2-only", "esm2-only"]])
-def test_benchmark_api_rejects_invalid_predictors(tmp_path, monkeypatch, predictors):
+@pytest.mark.parametrize("endpoint", ["/api/prediction/benchmark/run", "/api/benchmark/run"])
+def test_benchmark_submission_removed(tmp_path, monkeypatch, endpoint):
     monkeypatch.delenv("AEROFOLD_API_TOKEN", raising=False)
     with TestClient(create_app(tmp_path)) as client:
-        response = client.post("/api/prediction/benchmark/run", json={"predictors": predictors})
-        assert response.status_code == 422
+        assert endpoint not in client.get("/openapi.json").json()["paths"]
+        assert client.post(endpoint, json={}).status_code in {404, 405}
         assert client.get("/api/prediction/jobs").json() == []
+
+
+def test_saved_benchmarks_not_exposed(tmp_path, monkeypatch):
+    from backend.storage import Store
+    store = Store(tmp_path / "aerofold.sqlite3")
+    identifier = store.create_prediction_job("prediction_benchmark", {})
+    monkeypatch.delenv("AEROFOLD_API_TOKEN", raising=False)
+    with TestClient(create_app(tmp_path)) as client:
+        assert client.get("/api/prediction/jobs").json() == []
+        assert client.get(f"/api/prediction/jobs/{identifier}").status_code == 404
+        assert client.get(f"/api/prediction/jobs/{identifier}/export?format=json").status_code == 404

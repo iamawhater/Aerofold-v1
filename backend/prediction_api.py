@@ -1,4 +1,4 @@
-"""Authenticated, bounded-job API for supervised predictions and benchmarks."""
+"""Authenticated, bounded-job API for supervised predictions."""
 
 from __future__ import annotations
 
@@ -11,9 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 
-from backend.foundation_benchmarks import run_benchmark_suite
 from backend.predictions import (
-    PredictionBenchmarkConfig,
     PredictionConfig,
     partition,
     run_prediction,
@@ -32,17 +30,7 @@ def prediction_router(root: Path, store, executor, slots, authorize) -> APIRoute
             def progress(message: str) -> None:
                 store.update_prediction_job(identifier, "running", message)
 
-            if kind == "prediction_benchmark":
-                result = run_benchmark_suite(
-                    config,
-                    root,
-                    config.predictors,
-                    progress,
-                    config.embedding_batch_size,
-                    config.local_only,
-                )
-            else:
-                result = run_prediction(config, root, progress)
+            result = run_prediction(config, root, progress)
             store.update_prediction_job(identifier, "completed", "Complete", result=result)
         except Exception as exc:
             logger.exception("Prediction job failed")
@@ -59,7 +47,7 @@ def prediction_router(root: Path, store, executor, slots, authorize) -> APIRoute
         metadata, records = load_task(config.task_id, root / "custom-tasks")
         if not metadata["ready"]:
             raise ValueError("This assay has too few examples for validated model training")
-        if kind == "prediction_benchmark" or config.queries is None:
+        if config.queries is None:
             partition(records, config.seed, getattr(config, "split", "random"))
         if 0 < config.train_limit < 60:
             raise ValueError("Choose at least 60 training sequences, or 0 to use all available")
@@ -109,21 +97,23 @@ def prediction_router(root: Path, store, executor, slots, authorize) -> APIRoute
         settings["queries"] = parse_sequences(raw)
         return enqueue(PredictionConfig.model_validate(settings), "prediction")
 
-    @router.post("/benchmark/run", status_code=202)
-    def benchmark(config: PredictionBenchmarkConfig) -> dict:
-        return enqueue(config, "prediction_benchmark")
-
     @router.get("/jobs")
     def history() -> list[dict]:
-        return store.prediction_jobs()
+        return [job for job in store.prediction_jobs() if job["kind"] == "prediction"]
+
+    def prediction_job(identifier: str) -> dict:
+        record = store.prediction_job(identifier)
+        if record["kind"] != "prediction":
+            raise HTTPException(404, "Prediction not found")
+        return record
 
     @router.get("/jobs/{identifier}")
     def job(identifier: str) -> dict:
-        return store.prediction_job(identifier)
+        return prediction_job(identifier)
 
     @router.get("/jobs/{identifier}/export")
     def export(identifier: str, format: str = "csv") -> Response:
-        job = store.prediction_job(identifier)
+        job = prediction_job(identifier)
         if job["status"] != "completed":
             raise HTTPException(409, "Wait for the model job to finish")
         result = job["result"]
@@ -133,8 +123,8 @@ def prediction_router(root: Path, store, executor, slots, authorize) -> APIRoute
                 media_type="application/json",
                 headers={"Content-Disposition": f'attachment; filename="aerofold-{identifier}.json"'},
             )
-        if format != "csv" or job["kind"] != "prediction":
-            raise ValueError("Use format=json for benchmarks, or csv for prediction rankings")
+        if format != "csv":
+            raise ValueError("Use format=json or csv for prediction rankings")
         output = io.StringIO(newline="")
         fields = [
             "rank",
